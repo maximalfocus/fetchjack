@@ -21,6 +21,14 @@ it.
 - Fictional data only: every fixture standing in for a secret declares in its own
   contents that it is fictional.
 
+## Walkthrough
+
+New to SSRF? Read **[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)** — a ~5-minute,
+source-free tour of why a server-side fetch crosses a trust boundary, the four
+demonstration cases and their expected outcomes, why an allowlist beats a
+denylist, why validating only the submitted URL is not enough, and what is
+deliberately out of scope.
+
 ## Requirements
 
 Only **Docker** (with Compose v2) is required on the host. Python, project
@@ -74,6 +82,10 @@ curl -X POST http://127.0.0.1:8000/previews \
 The secure application enforces a **scheme allowlist** (`http`, `https`) and a
 **host allowlist** (only `assets.larkspur.test`) on **every** request it makes,
 re-validating each redirect hop before contacting it.
+
+Each application also exposes its generated OpenAPI documentation locally, e.g.
+for the secure app: `http://127.0.0.1:8000/docs` (Swagger UI) and
+`http://127.0.0.1:8000/openapi.json` (raw schema).
 
 ## The vulnerable application (opt-in)
 
@@ -174,6 +186,8 @@ Delivered so far: the repository skeleton, the fictional Larkspur workspace and
 preview-record model, the in-network fixture targets, the local fixture secret
 file, the containerized verification boundary with CI, the **secure preview
 service** (the fixed reference implementation), the **vulnerable** and **naive**
-applications behind their two-action opt-in gate, and the **scripted comparison
-CLI** with the one-shot demo and the full security regression matrix. The
-educational walkthrough and the publication work arrive in later slices.
+applications behind their two-action opt-in gate, the **scripted comparison CLI**
+with the one-shot demo and the full security regression matrix, and the
+**educational walkthrough** ([docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)). The
+publication work (licensing, public-facing docs, visibility transition) is the
+one remaining slice.
