@@ -91,3 +91,13 @@ def test_render_verbose_shows_hops_and_decisions() -> None:
     assert "hop:" in output
     assert "decision:" in output
     assert "preview history:" in output
+
+
+def test_render_default_is_understandable_without_source() -> None:
+    output = render([_report(_VULNERABLE, "vulnerable")], verbose=False)
+    assert "submitted:" in output
+    assert "file:///app/secrets/preview_worker.env" in output
+    assert "returned the fictional local secret file" in output
+    assert "rejected — nothing disclosed" not in output  # vulnerable leaks everything
+    assert "VERDICT:" in output
+    assert "preview history:" in output

@@ -27,6 +27,7 @@ class Case:
     name: str
     url: str
     marker: str
+    returned_label: str
     is_attack: bool
     chain: tuple[str, ...]
     decisions: Mapping[str, str]
@@ -37,6 +38,7 @@ CASES: tuple[Case, ...] = (
         name="file:// scheme abuse",
         url="file:///app/secrets/preview_worker.env",
         marker="PREVIEW_WORKER_TOKEN",
+        returned_label="the fictional local secret file's contents",
         is_attack=True,
         chain=("file:///app/secrets/preview_worker.env",),
         decisions={
@@ -49,6 +51,7 @@ CASES: tuple[Case, ...] = (
         name="internal-host reach",
         url="http://backoffice.larkspur.internal/service-account",
         marker="service_account_token",
+        returned_label="the fictional internal service credential",
         is_attack=True,
         chain=("http://backoffice.larkspur.internal/service-account",),
         decisions={
@@ -61,6 +64,7 @@ CASES: tuple[Case, ...] = (
         name="allowlisted-host redirect bypass",
         url="http://assets.larkspur.test/r?to=http://backoffice.larkspur.internal/service-account",
         marker="service_account_token",
+        returned_label="the fictional internal service credential (via the redirect)",
         is_attack=True,
         chain=(
             "http://assets.larkspur.test/r?to=... (host allowlisted)",
@@ -76,6 +80,7 @@ CASES: tuple[Case, ...] = (
         name="legitimate preview",
         url="http://assets.larkspur.test/notes/1",
         marker="Fictional preview body for note 1",
+        returned_label="the benign preview",
         is_attack=False,
         chain=("http://assets.larkspur.test/notes/1 (host allowlisted)",),
         decisions={
@@ -183,20 +188,21 @@ def render(reports: list[AppReport], *, verbose: bool) -> str:
             f"  preview history: {report.history_before} -> {report.history_after} record(s)"
         )
         for obs in report.observations:
-            if obs.case.is_attack:
-                leaked = "yes" if obs.returned_marker else "no"
-                tail = f"leaked: {leaked}"
-            else:
-                tail = "ok" if obs.returned_marker else "unexpected"
             record = "yes" if obs.record_created else "no"
-            lines.append(
-                f"  - {obs.case.name:<36} status {obs.status:<4} record: {record:<4} {tail}"
-            )
+            if obs.returned_marker:
+                returned = f"returned {obs.case.returned_label}"
+            elif obs.case.is_attack:
+                returned = "rejected — nothing disclosed"
+            else:
+                returned = "unexpected result"
+            lines.append(f"  - {obs.case.name}")
+            lines.append(f"      submitted: {obs.case.url}")
+            lines.append(f"      result:    status {obs.status}, record: {record} — {returned}")
             if verbose:
                 for hop in obs.case.chain:
-                    lines.append(f"        hop: {hop}")
-                lines.append(f"        decision: {obs.case.decisions[report.role]}")
-                lines.append(f"        body: {obs.body_excerpt!r}")
+                    lines.append(f"      hop:       {hop}")
+                lines.append(f"      decision:  {obs.case.decisions[report.role]}")
+                lines.append(f"      body:      {obs.body_excerpt!r}")
         lines.append("")
     return "\n".join(lines)
 
