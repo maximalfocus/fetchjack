@@ -128,6 +128,30 @@ services:
       retries: 20
       start_period: 3s
 
+  # One-shot disposable demo: runs the scripted comparison against all three
+  # live applications and the fixtures, then exits. Started only under the
+  # `vulnerable` profile (so the non-secure apps are available). Invoke via
+  # `scripts/demo.sh`, which supplies the acknowledgement and tears down after.
+  demo:
+    build: .
+    image: fetchjack:dev
+    profiles: ["vulnerable"]
+    command: ["python", "-m", "fetchjack.cli"]
+    environment:
+      SECURE_URL: http://secure:8000
+      VULNERABLE_URL: http://vulnerable:8001
+      NAIVE_URL: http://naive:8002
+      DEMO_TOKEN: demo-token-ada
+    networks:
+      - larkspur
+    depends_on:
+      secure:
+        condition: service_healthy
+      vulnerable:
+        condition: service_healthy
+      naive:
+        condition: service_healthy
+
   # One-shot verification gate: Ruff, mypy, and pytest inside the container,
   # against healthy fixtures and the live secure service. Invoked with
   # `docker compose run --rm --build verify`.
