@@ -35,15 +35,45 @@ Run the full test + Ruff + mypy gate through one command:
 docker compose run --rm --build verify
 ```
 
-This builds the image, starts the in-network fixture targets, waits for them to
-become healthy, and runs Ruff, mypy, and pytest against them. GitHub Actions runs
-the identical command on every pull request.
+This builds the image, starts the in-network fixture targets and the secure
+service, waits for them to become healthy, and runs Ruff, mypy, and pytest
+against them. GitHub Actions runs the identical command on every pull request.
 
-To remove the fixture containers and network afterwards:
+To remove the containers and network afterwards:
 
 ```sh
 docker compose down -v
 ```
+
+## Running the secure application
+
+The secure application is the default long-running service. Start it (with its
+fixtures) and reach it on loopback:
+
+```sh
+docker compose up -d
+curl http://127.0.0.1:8000/healthz
+```
+
+It authenticates fictional users with demo-only bearer tokens and exposes:
+
+- `POST /previews` — submit a URL; the server fetches it and stores a preview
+  record. A legitimate allowlisted URL returns `201`; any target whose scheme or
+  host is not allowlisted — including a redirect to a non-allowlisted host — is
+  rejected with a generic `400` and a structured rejection event on stdout.
+- `GET /previews` — the authenticated user's preview history.
+
+```sh
+# A legitimate preview (201):
+curl -X POST http://127.0.0.1:8000/previews \
+  -H "Authorization: Bearer demo-token-ada" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"http://assets.larkspur.test/notes/1"}'
+```
+
+The secure application enforces a **scheme allowlist** (`http`, `https`) and a
+**host allowlist** (only `assets.larkspur.test`) on **every** request it makes,
+re-validating each redirect hop before contacting it.
 
 ## In-network fixtures
 
@@ -59,8 +89,9 @@ The demonstration provides, reachable **only inside the container network**:
 
 ## Status
 
-This is the foundational slice: the repository skeleton, the fictional Larkspur
-workspace and preview-record model, the in-network fixture targets, the local
-fixture secret file, and the containerized verification boundary with CI. The
-secure, vulnerable, and naive preview applications, the comparison CLI, the
-walkthrough, and the publication work arrive in later slices.
+Delivered so far: the repository skeleton, the fictional Larkspur workspace and
+preview-record model, the in-network fixture targets, the local fixture secret
+file, the containerized verification boundary with CI, and the **secure preview
+service** (the fixed reference implementation). The vulnerable and naive
+applications, the two-action opt-in gate, the comparison CLI, the walkthrough,
+and the publication work arrive in later slices.

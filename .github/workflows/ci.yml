@@ -10,5 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Containerized verification gate
         run: docker compose run --rm --build verify
+
+      - name: Secure app reachable on 127.0.0.1:8000 (default service)
+        run: |
+          docker compose up -d
+          ok=""
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null http://127.0.0.1:8000/healthz; then ok=1; break; fi
+            sleep 2
+          done
+          test -n "$ok"
+          curl -sf http://127.0.0.1:8000/healthz
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
