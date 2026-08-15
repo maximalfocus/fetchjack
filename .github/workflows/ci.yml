@@ -25,6 +25,9 @@ jobs:
           test -n "$ok"
           curl -sf http://127.0.0.1:8000/healthz
 
+      - name: Opt-in gate and vulnerable SSRF outcomes
+        run: bash scripts/check_optin.sh
+
       - name: Tear down
         if: always()
         run: docker compose down -v

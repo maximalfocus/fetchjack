@@ -67,6 +67,36 @@ services:
       retries: 20
       start_period: 3s
 
+  # The vulnerable application: intentionally unsafe, no scheme/host validation,
+  # follows redirects, resolves file://. Two deliberate actions are required to
+  # start it: the `vulnerable` Compose profile AND ALLOW_VULNERABLE_DEMO=true.
+  # Never deploy it.
+  vulnerable:
+    build: .
+    image: fetchjack:dev
+    profiles: ["vulnerable"]
+    command: ["uvicorn", "fetchjack.apps.vulnerable:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      ALLOW_VULNERABLE_DEMO: "${ALLOW_VULNERABLE_DEMO:-}"
+      DATABASE_URL: sqlite+pysqlite:////app/var/vulnerable.db
+    ports:
+      - "127.0.0.1:8001:8001"
+    tmpfs:
+      - /app/var
+    networks:
+      - larkspur
+    depends_on:
+      assets:
+        condition: service_healthy
+      backoffice:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:8001/healthz').status_code==200 else 1)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
   # One-shot verification gate: Ruff, mypy, and pytest inside the container,
   # against healthy fixtures and the live secure service. Invoked with
   # `docker compose run --rm --build verify`.

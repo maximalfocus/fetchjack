@@ -75,6 +75,37 @@ The secure application enforces a **scheme allowlist** (`http`, `https`) and a
 **host allowlist** (only `assets.larkspur.test`) on **every** request it makes,
 re-validating each redirect hop before contacting it.
 
+## The vulnerable application (opt-in)
+
+> ⚠️ The vulnerable application has **no** SSRF protection and is local
+> educational code only. **Never deploy it.**
+
+It is not started by the default `docker compose up`. Starting it requires **two**
+deliberate actions — enabling the `vulnerable` Compose profile **and** setting
+`ALLOW_VULNERABLE_DEMO=true`. With either missing, it refuses to start and
+explains why.
+
+```sh
+ALLOW_VULNERABLE_DEMO=true docker compose --profile vulnerable up -d vulnerable
+```
+
+It listens on `127.0.0.1:8001` and fetches whatever URL is submitted, with no
+validation, following redirects and resolving `file://`:
+
+```sh
+# Scheme abuse — returns the fictional local secret file's contents:
+curl -X POST http://127.0.0.1:8001/previews \
+  -H "Authorization: Bearer demo-token-ada" -H "Content-Type: application/json" \
+  -d '{"url":"file:///app/secrets/preview_worker.env"}'
+
+# Internal reach — returns the fictional internal service credential:
+curl -X POST http://127.0.0.1:8001/previews \
+  -H "Authorization: Bearer demo-token-ada" -H "Content-Type: application/json" \
+  -d '{"url":"http://backoffice.larkspur.internal/service-account"}'
+```
+
+`scripts/check_optin.sh` verifies the opt-in gate and these outcomes end to end.
+
 ## In-network fixtures
 
 The demonstration provides, reachable **only inside the container network**:
@@ -91,7 +122,7 @@ The demonstration provides, reachable **only inside the container network**:
 
 Delivered so far: the repository skeleton, the fictional Larkspur workspace and
 preview-record model, the in-network fixture targets, the local fixture secret
-file, the containerized verification boundary with CI, and the **secure preview
-service** (the fixed reference implementation). The vulnerable and naive
-applications, the two-action opt-in gate, the comparison CLI, the walkthrough,
-and the publication work arrive in later slices.
+file, the containerized verification boundary with CI, the **secure preview
+service** (the fixed reference implementation), and the **vulnerable application**
+behind its two-action opt-in gate. The naive submitted-URL-only variant, the
+comparison CLI, the walkthrough, and the publication work arrive in later slices.
