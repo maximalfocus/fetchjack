@@ -132,6 +132,30 @@ sufficient** once redirects are followed.
 `scripts/check_optin.sh` verifies the opt-in gate and the vulnerable and naive
 outcomes end to end.
 
+## One-shot comparison demo
+
+The simplest way to see all three applications side by side is the disposable
+demo, which starts the apps and fixtures on fresh databases, runs the scripted
+comparison, prints a per-application verdict, and tears everything down:
+
+```sh
+scripts/demo.sh            # scripted comparison
+scripts/demo.sh --verbose  # also show hops, allowlist decisions, and bodies
+```
+
+It submits the same four cases (`file://` scheme abuse, internal-host reach,
+allowlisted-host redirect bypass, and a legitimate preview) to each application
+and reports whether each returned the fictional secret/credential and what it
+stored — yielding `SECURE`, `VULNERABLE`, and `NAIVE` verdicts. Docker Compose is
+the only host requirement, and the run completes in well under five minutes.
+
+An interactive mode is also available (submit your own URLs to all three apps):
+
+```sh
+ALLOW_VULNERABLE_DEMO=true docker compose --profile vulnerable run --rm demo \
+  python -m fetchjack.cli --interactive
+```
+
 ## In-network fixtures
 
 The demonstration provides, reachable **only inside the container network**:
@@ -149,6 +173,7 @@ The demonstration provides, reachable **only inside the container network**:
 Delivered so far: the repository skeleton, the fictional Larkspur workspace and
 preview-record model, the in-network fixture targets, the local fixture secret
 file, the containerized verification boundary with CI, the **secure preview
-service** (the fixed reference implementation), and the **vulnerable** and
-**naive** applications behind their two-action opt-in gate. The comparison CLI,
-the walkthrough, and the publication work arrive in later slices.
+service** (the fixed reference implementation), the **vulnerable** and **naive**
+applications behind their two-action opt-in gate, and the **scripted comparison
+CLI** with the one-shot demo and the full security regression matrix. The
+educational walkthrough and the publication work arrive in later slices.

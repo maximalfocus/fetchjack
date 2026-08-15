@@ -28,6 +28,14 @@ jobs:
       - name: Opt-in gate and vulnerable SSRF outcomes
         run: bash scripts/check_optin.sh
 
+      - name: One-shot scripted comparison demo
+        run: |
+          out="$(bash scripts/demo.sh)"
+          echo "$out"
+          echo "$out" | grep -q "SECURE"
+          echo "$out" | grep -q "VULNERABLE"
+          echo "$out" | grep -q "NAIVE"
+
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: ALLOW_VULNERABLE_DEMO=true docker compose --profile vulnerable down -v
