@@ -1,0 +1,64 @@
+name: fetchjack
+
+services:
+  # Allowlisted upstream fixture — the one external content source the preview
+  # feature is meant to use. Reachable only inside the container network.
+  assets:
+    build: .
+    image: fetchjack:dev
+    command: ["uvicorn", "fetchjack.fixtures.app:app", "--host", "0.0.0.0", "--port", "80"]
+    environment:
+      FIXTURE_ROLE: assets
+    networks:
+      larkspur:
+        aliases:
+          - assets.larkspur.test
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:80/healthz').status_code==200 else 1)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
+  # Internal-only fixture — never on the allowlist and never published to the
+  # host. Serves a conspicuously fictional internal service credential.
+  backoffice:
+    build: .
+    image: fetchjack:dev
+    command: ["uvicorn", "fetchjack.fixtures.app:app", "--host", "0.0.0.0", "--port", "80"]
+    environment:
+      FIXTURE_ROLE: internal
+    networks:
+      larkspur:
+        aliases:
+          - backoffice.larkspur.internal
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:80/healthz').status_code==200 else 1)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
+  # One-shot verification gate: Ruff, mypy, and pytest inside the container,
+  # against healthy fixtures. Invoked with `docker compose run --rm --build verify`.
+  verify:
+    build: .
+    image: fetchjack:dev
+    profiles: ["verify"]
+    command: ["sh", "-euc", "ruff check . && ruff format --check . && mypy src tests && pytest -q"]
+    environment:
+      ASSETS_BASE_URL: http://assets.larkspur.test
+      INTERNAL_BASE_URL: http://backoffice.larkspur.internal
+    depends_on:
+      assets:
+        condition: service_healthy
+      backoffice:
+        condition: service_healthy
+    networks:
+      - larkspur
+
+networks:
+  # `internal: true` gives the fixtures and the verification run no route to the
+  # public internet: every outbound request stays inside this network.
+  larkspur:
+    internal: true
