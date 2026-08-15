@@ -18,3 +18,7 @@ RUN uv pip install --system --no-cache ".[dev]"
 # Copy the remaining sources: tests, the fictional local fixture secret at
 # /app/secrets/preview_worker.env, and the tooling configuration.
 COPY . .
+
+# Writable location for each application's ephemeral SQLite database. Compose
+# mounts a fresh tmpfs here so every run starts from empty preview history.
+RUN mkdir -p /app/var
