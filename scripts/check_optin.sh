@@ -31,9 +31,13 @@ echo "   ok"
 
 echo "2) profile enabled but no acknowledgement must be refused with an explanation"
 docker compose --profile vulnerable up -d vulnerable naive >/dev/null 2>&1 || true
-sleep 3
 for svc in vulnerable naive; do
-  if ! docker compose logs "$svc" 2>&1 | grep -q "Refusing to start"; then
+  found=""
+  for _ in $(seq 1 30); do
+    if docker compose logs "$svc" 2>&1 | grep -q "Refusing to start"; then found=1; break; fi
+    sleep 1
+  done
+  if [ -z "$found" ]; then
     echo "FAIL: $svc did not refuse to start without ALLOW_VULNERABLE_DEMO=true" >&2
     docker compose logs "$svc" >&2 || true
     exit 1
