@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 from urllib.parse import urljoin, urlsplit
 
@@ -108,3 +109,33 @@ class SecureFetcher:
                     continue
                 return parse_preview(str(response.url), response.text)
         raise RejectionError("redirect")
+
+
+class VulnerableFetcher:
+    """Fetch whatever URL is submitted, with no validation, following redirects.
+
+    A deliberately unsafe construction that resolves non-HTTP schemes (``file://``
+    is read straight off disk) so the SSRF scheme-abuse and internal-reach
+    outcomes are reproducible. It still cannot leave the container network or
+    filesystem.
+    """
+
+    def __init__(
+        self,
+        *,
+        timeout: float = 5.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self._timeout = timeout
+        self._transport = transport
+
+    def fetch(self, url: str) -> FetchResult:
+        parts = urlsplit(url)
+        if parts.scheme == "file":
+            data = Path(parts.path).read_bytes()
+            return parse_preview(url, data.decode("utf-8", errors="replace"))
+        with httpx.Client(
+            transport=self._transport, follow_redirects=True, timeout=self._timeout
+        ) as client:
+            response = client.get(url)
+            return parse_preview(str(response.url), response.text)
