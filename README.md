@@ -104,7 +104,33 @@ curl -X POST http://127.0.0.1:8001/previews \
   -d '{"url":"http://backoffice.larkspur.internal/service-account"}'
 ```
 
-`scripts/check_optin.sh` verifies the opt-in gate and these outcomes end to end.
+## The naive application (opt-in)
+
+> ⚠️ The naive application is intentionally half-fixed — local educational code
+> only. **Never deploy it.**
+
+Under the **same** two-action opt-in gate, the naive application listens on
+`127.0.0.1:8002`. It validates only the *submitted* URL against the allowlist —
+so it rejects a direct `file://` or internal-host submission exactly as the
+secure app does — but then follows redirects **without re-validating** each hop:
+
+```sh
+# Rejected exactly like the secure app (generic 400):
+curl -X POST http://127.0.0.1:8002/previews \
+  -H "Authorization: Bearer demo-token-ada" -H "Content-Type: application/json" \
+  -d '{"url":"http://backoffice.larkspur.internal/service-account"}'
+
+# But defeated by an allowlisted host that redirects to an internal target (201):
+curl -X POST http://127.0.0.1:8002/previews \
+  -H "Authorization: Bearer demo-token-ada" -H "Content-Type: application/json" \
+  -d '{"url":"http://assets.larkspur.test/r?to=http://backoffice.larkspur.internal/service-account"}'
+```
+
+This shows why validating only the submitted URL is **necessary but not
+sufficient** once redirects are followed.
+
+`scripts/check_optin.sh` verifies the opt-in gate and the vulnerable and naive
+outcomes end to end.
 
 ## In-network fixtures
 
@@ -123,6 +149,6 @@ The demonstration provides, reachable **only inside the container network**:
 Delivered so far: the repository skeleton, the fictional Larkspur workspace and
 preview-record model, the in-network fixture targets, the local fixture secret
 file, the containerized verification boundary with CI, the **secure preview
-service** (the fixed reference implementation), and the **vulnerable application**
-behind its two-action opt-in gate. The naive submitted-URL-only variant, the
-comparison CLI, the walkthrough, and the publication work arrive in later slices.
+service** (the fixed reference implementation), and the **vulnerable** and
+**naive** applications behind their two-action opt-in gate. The comparison CLI,
+the walkthrough, and the publication work arrive in later slices.
