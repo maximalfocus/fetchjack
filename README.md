@@ -7,10 +7,16 @@ be turned into a way to reach places the user never could directly, and how a
 **scheme and host allowlist enforced on every request the server makes** prevents
 it.
 
-> **This repository is under private development.** It is local educational code.
-> It ships no working exploit, contacts no real system, and performs no access to
-> the public internet. Every host, token, credential, and fixture file is wholly
-> fictional. No license is granted yet.
+> ⚠️ **This repository is intentionally vulnerable on purpose.** Two of its three
+> applications ship a real SSRF flaw so you can watch it work and then watch the
+> fix stop it. It is local educational code and **must never be deployed**. It
+> ships no working exploit against anything but itself, contacts no real system,
+> and performs no access to the public internet. Every host, user, token,
+> credential, and fixture file is wholly fictional.
+
+Everything runs locally under **Docker Compose**. There is **no hosted service**,
+nothing is published as an image or a package, and nothing here makes any
+production-readiness claim.
 
 ## Safety boundary
 
@@ -20,6 +26,15 @@ it.
   stays inside the container network.
 - Fictional data only: every fixture standing in for a secret declares in its own
   contents that it is fictional.
+- Gated: neither intentionally vulnerable application starts without **two**
+  deliberate opt-in actions.
+
+## License and policies
+
+Released under the [MIT License](LICENSE). Before reporting a security issue,
+please read [SECURITY.md](SECURITY.md) — it explains which flaws are the lesson
+and must not be reported, and gives a private path for the ones that are genuine.
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Walkthrough
 
@@ -180,14 +195,11 @@ The demonstration provides, reachable **only inside the container network**:
 - **`/app/secrets/preview_worker.env`** — a local fixture file baked into the
   image, standing in for a local secret; its own contents declare it fictional.
 
-## Status
+## Deliberately out of scope
 
-Delivered so far: the repository skeleton, the fictional Larkspur workspace and
-preview-record model, the in-network fixture targets, the local fixture secret
-file, the containerized verification boundary with CI, the **secure preview
-service** (the fixed reference implementation), the **vulnerable** and **naive**
-applications behind their two-action opt-in gate, the **scripted comparison CLI**
-with the one-shot demo and the full security regression matrix, and the
-**educational walkthrough** ([docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)). The
-publication work (licensing, public-facing docs, visibility transition) is the
-one remaining slice.
+To keep one lesson clear, this demo does **not** address — and its host allowlist
+is **not** a defence against — resolved-address and link-local blocking
+(`127.0.0.0/8`, `169.254.0.0/16`, `::1`, RFC 1918) as the taught control, cloud
+metadata retrieval, or DNS rebinding and TOCTOU on hostname resolution. These are
+out of scope **by design**, not oversights;
+[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) §7 says so explicitly.

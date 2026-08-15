@@ -149,8 +149,8 @@ before contacting it, under a fixed hop cap. Validating only the submitted URL i
 ## 7. Deliberately out of scope
 
 To keep one lesson clear, this demo does **not** address — and its hostname
-allowlist is **not** a defence against — the following, each of which is a
-**separate demo** on the series roadmap:
+allowlist is **not** a defence against — the following, each of which is its own
+separate demonstration:
 
 - **Resolved-address / link-local blocking** (`127.0.0.0/8`, `169.254.0.0/16`,
   `::1`, RFC 1918) as the taught control;
