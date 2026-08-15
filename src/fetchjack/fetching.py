@@ -60,6 +60,15 @@ def parse_preview(final_url: str, text: str) -> FetchResult:
     return FetchResult(final_url=final_url, title=title, snippet=snippet, body=text)
 
 
+def check_allowlist(url: str, *, schemes: frozenset[str], hosts: frozenset[str]) -> None:
+    """Raise ``RejectionError`` if ``url``'s scheme or host is not allowlisted."""
+    parts = urlsplit(url)
+    if parts.scheme.lower() not in schemes:
+        raise RejectionError("scheme")
+    if (parts.hostname or "") not in hosts:
+        raise RejectionError("host")
+
+
 class SecureFetcher:
     """Fetch a URL only after validating its scheme and host on every hop."""
 
@@ -79,11 +88,7 @@ class SecureFetcher:
         self._transport = transport
 
     def _validate(self, url: str) -> None:
-        parts = urlsplit(url)
-        if parts.scheme.lower() not in self._schemes:
-            raise RejectionError("scheme")
-        if (parts.hostname or "") not in self._hosts:
-            raise RejectionError("host")
+        check_allowlist(url, schemes=self._schemes, hosts=self._hosts)
 
     def fetch(self, url: str) -> FetchResult:
         self._validate(url)
@@ -136,6 +141,43 @@ class VulnerableFetcher:
             return parse_preview(url, data.decode("utf-8", errors="replace"))
         with httpx.Client(
             transport=self._transport, follow_redirects=True, timeout=self._timeout
+        ) as client:
+            response = client.get(url)
+            return parse_preview(str(response.url), response.text)
+
+
+class NaiveFetcher:
+    """Validate only the submitted URL, then follow redirects without re-checking.
+
+    This half-fix rejects a direct disallowed scheme or host exactly as the secure
+    fetcher does, but blindly follows redirects — so an allowlisted host that
+    redirects to an internal target defeats it. It still cannot leave the
+    container network.
+    """
+
+    def __init__(
+        self,
+        *,
+        allowed_schemes: Iterable[str],
+        allowed_hosts: Iterable[str],
+        max_redirects: int = 5,
+        timeout: float = 5.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        self._schemes = frozenset(s.lower() for s in allowed_schemes)
+        self._hosts = frozenset(allowed_hosts)
+        self._max_redirects = max_redirects
+        self._timeout = timeout
+        self._transport = transport
+
+    def fetch(self, url: str) -> FetchResult:
+        # Validate the submitted URL only; redirect hops are NOT re-validated.
+        check_allowlist(url, schemes=self._schemes, hosts=self._hosts)
+        with httpx.Client(
+            transport=self._transport,
+            follow_redirects=True,
+            timeout=self._timeout,
+            max_redirects=self._max_redirects,
         ) as client:
             response = client.get(url)
             return parse_preview(str(response.url), response.text)

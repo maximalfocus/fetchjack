@@ -97,6 +97,37 @@ services:
       retries: 20
       start_period: 3s
 
+  # The naive application: validates only the submitted URL, then follows
+  # redirects without re-validating. Same two-action opt-in gate as vulnerable.
+  # Never deploy it.
+  naive:
+    build: .
+    image: fetchjack:dev
+    profiles: ["vulnerable"]
+    command: ["uvicorn", "fetchjack.apps.naive:app", "--host", "0.0.0.0", "--port", "8002"]
+    environment:
+      ALLOW_VULNERABLE_DEMO: "${ALLOW_VULNERABLE_DEMO:-}"
+      ALLOWED_SCHEMES: http,https
+      ALLOWED_HOSTS: assets.larkspur.test
+      DATABASE_URL: sqlite+pysqlite:////app/var/naive.db
+    ports:
+      - "127.0.0.1:8002:8002"
+    tmpfs:
+      - /app/var
+    networks:
+      - larkspur
+    depends_on:
+      assets:
+        condition: service_healthy
+      backoffice:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://localhost:8002/healthz').status_code==200 else 1)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
   # One-shot verification gate: Ruff, mypy, and pytest inside the container,
   # against healthy fixtures and the live secure service. Invoked with
   # `docker compose run --rm --build verify`.
